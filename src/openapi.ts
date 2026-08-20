@@ -127,6 +127,26 @@ const openapiDocument = {
         },
       },
     },
+    "/auth/me": {
+      get: {
+        tags: ["Auth"],
+        summary: "Get the current user",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": { description: "Current user" },
+          "401": { description: "Authentication required" },
+        },
+      },
+      delete: {
+        tags: ["Auth"],
+        summary: "Delete the current account and owned data",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": { description: "Account deleted" },
+          "401": { description: "Authentication required" },
+        },
+      },
+    },
     "/recipes": {
       get: {
         tags: ["Recipes"],

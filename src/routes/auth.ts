@@ -1,7 +1,8 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { usersCollection } from "../db";
+import { ObjectId } from "mongodb";
+import { favoritesCollection, recipesCollection, usersCollection } from "../db";
 import { JWT_SECRET, requireAuth } from "../middleware/auth";
 
 const router = Router();
@@ -79,6 +80,32 @@ router.get("/me", requireAuth, async (req, res) => {
   if (!user) return res.status(401).json({ error: "User account not found" });
 
   res.json(userResponse(user));
+});
+
+// DELETE /auth/me - permanently remove the account and its owned data
+router.delete("/me", requireAuth, async (req, res) => {
+  if (!ObjectId.isValid(req.user!.userId)) {
+    return res.status(401).json({ error: "Invalid user account" });
+  }
+
+  const userId = new ObjectId(req.user!.userId);
+  const recipes = await recipesCollection()
+    .find({ createdBy: userId }, { projection: { id: 1 } })
+    .toArray();
+  const recipeIds = recipes.map((recipe) => recipe.id);
+
+  await favoritesCollection().deleteMany({ userId });
+  if (recipeIds.length > 0) {
+    await favoritesCollection().deleteMany({ recipeId: { $in: recipeIds } });
+  }
+  await recipesCollection().deleteMany({ createdBy: userId });
+
+  const result = await usersCollection().deleteOne({ _id: userId });
+  if (result.deletedCount === 0) {
+    return res.status(404).json({ error: "User account not found" });
+  }
+
+  res.json({ message: "Account deleted" });
 });
 
 export default router;
