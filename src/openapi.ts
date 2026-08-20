@@ -23,7 +23,7 @@ const openapiDocument = {
     schemas: {
       RecipeInput: {
         type: "object",
-        required: ["title", "ingredients", "instructions"],
+        required: ["title", "ingredients", "instructions", "servings"],
         properties: {
           title: { type: "string", example: "Fluffy Pancakes" },
           ingredients: {

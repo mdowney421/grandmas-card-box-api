@@ -26,6 +26,8 @@ function validateRecipeInput(body: any): string | null {
   if (!Array.isArray(body.instructions) || body.instructions.length === 0)
     return "instructions must be a non-empty array";
   if (body.instructions.length > MAX_ITEMS) return `instructions cannot exceed ${MAX_ITEMS} items`;
+  if (!Number.isInteger(body.servings) || body.servings < 1)
+    return "servings must be a positive integer";
   return null;
 }
 
