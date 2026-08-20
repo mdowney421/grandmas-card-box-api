@@ -21,20 +21,15 @@ const openapiDocument = {
       },
     },
     schemas: {
-      Ingredient: {
-        type: "object",
-        required: ["text"],
-        properties: { text: { type: "string", example: "2 eggs" } },
-      },
       RecipeInput: {
         type: "object",
-        required: ["title", "ingredients", "instructions", "imageUrl"],
+        required: ["title", "ingredients", "instructions"],
         properties: {
           title: { type: "string", example: "Fluffy Pancakes" },
           ingredients: {
             type: "array",
             maxItems: 10,
-            items: { $ref: "#/components/schemas/Ingredient" },
+            items: { type: "string" },
           },
           instructions: {
             type: "array",
@@ -42,9 +37,12 @@ const openapiDocument = {
             items: { type: "string" },
             example: ["Whisk the ingredients.", "Cook until golden."],
           },
+          cookTimeMin: { type: "integer", minimum: 0, example: 15 },
+          tag: { type: "string", example: "Dinner" },
           imageUrl: { type: "string", format: "uri", example: "https://example.com/pancakes.jpg" },
-          prepTimeMinutes: { type: "integer", minimum: 0, example: 10 },
-          cookTimeMinutes: { type: "integer", minimum: 0, example: 15 },
+          warningNote: { type: "string" },
+          servings: { type: "integer", minimum: 1 },
+          difficulty: { type: "string", enum: ["trivial", "medium", "high"] },
         },
       },
       Recipe: {
@@ -53,15 +51,10 @@ const openapiDocument = {
           {
             type: "object",
             properties: {
-              _id: { type: "string", example: "665f1a2b3c4d5e6f78901234" },
-              slug: { type: "string", example: "fluffy-pancakes" },
-              ingredientCount: { type: "integer", example: 4 },
-              totalTimeMinutes: { type: "integer", example: 25 },
-              createdBy: { type: "string", nullable: true },
+              id: { type: "string", example: "665f1a2b3c4d5e6f78901234" },
               createdAt: { type: "string", format: "date-time" },
-              updatedAt: { type: "string", format: "date-time" },
-              favoriteCount: { type: "integer", example: 3 },
-              isFavorited: { type: "boolean", example: false },
+              isUserUpload: { type: "boolean" },
+              inMyBox: { type: "boolean" },
             },
           },
         ],

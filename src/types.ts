@@ -1,22 +1,24 @@
 import { ObjectId } from "mongodb";
 
-export interface Ingredient {
-  text: string;
+export interface Recipe {
+  id: string;
+  title: string;
+  ingredients: string[]; // max 10, enforced in validation
+  instructions: string[]; // max 10, enforced in validation
+  cookTimeMin: number;
+  tag: string;
+  imageUrl?: string;
+  warningNote?: string;
+  createdAt: string;
+  isUserUpload: boolean;
+  inMyBox: boolean;
+  servings?: number;
+  difficulty?: "trivial" | "medium" | "high";
 }
 
-export interface Recipe {
+export interface RecipeDocument extends Recipe {
   _id?: ObjectId;
-  title: string;
-  slug: string;
-  ingredients: Ingredient[]; // max 10, enforced in validation
-  ingredientCount: number; // denormalized from ingredients.length
-  instructions: string[]; // max 10, enforced in validation
-  totalTimeMinutes: number; // denormalized from prep + cook
-  prepTimeMinutes?: number;
-  cookTimeMinutes?: number;
-  imageUrl: string;
   createdBy: ObjectId | null;
-  createdAt: Date;
   updatedAt: Date;
   favoriteCount: number;
 }
@@ -32,7 +34,7 @@ export interface User {
 export interface Favorite {
   _id?: ObjectId;
   userId: ObjectId;
-  recipeId: ObjectId;
+  recipeId: string;
   createdAt: Date;
 }
 

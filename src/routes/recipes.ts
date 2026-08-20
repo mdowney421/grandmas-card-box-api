@@ -2,7 +2,7 @@ import { Router } from "express";
 import { ObjectId, Filter } from "mongodb";
 import { recipesCollection, favoritesCollection } from "../db";
 import { requireAuth, attachUserIfPresent } from "../middleware/auth";
-import { Recipe } from "../types";
+import { RecipeDocument } from "../types";
 
 const router = Router();
 
@@ -21,11 +21,17 @@ function validateRecipeInput(body: any): string | null {
   if (!Array.isArray(body.ingredients) || body.ingredients.length === 0)
     return "ingredients must be a non-empty array";
   if (body.ingredients.length > MAX_ITEMS) return `ingredients cannot exceed ${MAX_ITEMS} items`;
+  if (body.ingredients.some((ingredient: unknown) => typeof ingredient !== "string"))
+    return "ingredients must be strings";
   if (!Array.isArray(body.instructions) || body.instructions.length === 0)
     return "instructions must be a non-empty array";
   if (body.instructions.length > MAX_ITEMS) return `instructions cannot exceed ${MAX_ITEMS} items`;
-  if (!body.imageUrl || typeof body.imageUrl !== "string") return "imageUrl is required";
   return null;
+}
+
+export function toPublicRecipe(recipe: RecipeDocument, inMyBox = false) {
+  const { _id, createdBy, updatedAt, favoriteCount, ...publicRecipe } = recipe;
+  return { ...publicRecipe, inMyBox };
 }
 
 // GET /recipes?name=pie&maxIngredients=5&maxTime=30
@@ -33,16 +39,16 @@ function validateRecipeInput(body: any): string | null {
 router.get("/", attachUserIfPresent, async (req, res) => {
   const { name, maxIngredients, maxTime } = req.query;
 
-  const filter: Filter<Recipe> = {};
+  const filter: Filter<RecipeDocument> = {};
 
   if (name && typeof name === "string") {
     filter.$text = { $search: name };
   }
   if (maxIngredients) {
-    filter.ingredientCount = { $lte: Number(maxIngredients) };
+    filter.$expr = { $lte: [{ $size: "$ingredients" }, Number(maxIngredients)] };
   }
   if (maxTime) {
-    filter.totalTimeMinutes = { $lte: Number(maxTime) };
+    filter.cookTimeMin = { $lte: Number(maxTime) };
   }
 
   const recipes = await recipesCollection().find(filter).limit(50).toArray();
@@ -56,23 +62,19 @@ router.get("/", attachUserIfPresent, async (req, res) => {
     const favoritedIds = new Set(favorites.map((f) => f.recipeId.toString()));
 
     return res.json(
-      recipes.map((r) => ({ ...r, isFavorited: favoritedIds.has(r._id!.toString()) }))
+      recipes.map((r) => toPublicRecipe(r, favoritedIds.has(r.id)))
     );
   }
 
-  res.json(recipes);
+  res.json(recipes.map((recipe) => toPublicRecipe(recipe)));
 });
 
 // GET /recipes/:id
 router.get("/:id", attachUserIfPresent, async (req, res) => {
-  if (!ObjectId.isValid(req.params.id)) {
-    return res.status(400).json({ error: "Invalid recipe id" });
-  }
-
-  const recipe = await recipesCollection().findOne({ _id: new ObjectId(req.params.id) });
+  const recipe = await recipesCollection().findOne({ id: req.params.id });
   if (!recipe) return res.status(404).json({ error: "Recipe not found" });
 
-  res.json(recipe);
+  res.json(toPublicRecipe(recipe));
 });
 
 // POST /recipes — requires login
@@ -80,58 +82,58 @@ router.post("/", requireAuth, async (req, res) => {
   const validationError = validateRecipeInput(req.body);
   if (validationError) return res.status(400).json({ error: validationError });
 
-  const { title, ingredients, instructions, imageUrl, prepTimeMinutes, cookTimeMinutes } = req.body;
+  const { title, ingredients, instructions, cookTimeMin, tag, imageUrl, warningNote, servings, difficulty } = req.body;
+  const now = new Date();
 
-  const newRecipe: Recipe = {
+  const newRecipe: RecipeDocument = {
+    id: new ObjectId().toHexString(),
     title,
-    slug: slugify(title),
     ingredients,
-    ingredientCount: ingredients.length,
     instructions,
-    prepTimeMinutes: prepTimeMinutes || 0,
-    cookTimeMinutes: cookTimeMinutes || 0,
-    totalTimeMinutes: (prepTimeMinutes || 0) + (cookTimeMinutes || 0),
+    cookTimeMin: cookTimeMin || 0,
+    tag: tag || "Dinner",
     imageUrl,
+    warningNote,
+    servings,
+    difficulty,
+    createdAt: now.toISOString(),
+    isUserUpload: true,
+    inMyBox: false,
     createdBy: new ObjectId(req.user!.userId),
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    updatedAt: now,
     favoriteCount: 0,
   };
 
   const result = await recipesCollection().insertOne(newRecipe);
-  res.status(201).json({ ...newRecipe, _id: result.insertedId });
+  res.status(201).json(toPublicRecipe({ ...newRecipe, _id: result.insertedId }));
 });
 
 // PUT /recipes/:id — requires login, only the original uploader can edit
 router.put("/:id", requireAuth, async (req, res) => {
-  if (!ObjectId.isValid(req.params.id)) {
-    return res.status(400).json({ error: "Invalid recipe id" });
-  }
-
   const validationError = validateRecipeInput(req.body);
   if (validationError) return res.status(400).json({ error: validationError });
 
-  const recipe = await recipesCollection().findOne({ _id: new ObjectId(req.params.id) });
+  const recipe = await recipesCollection().findOne({ id: req.params.id });
   if (!recipe) return res.status(404).json({ error: "Recipe not found" });
   if (recipe.createdBy?.toString() !== req.user!.userId) {
     return res.status(403).json({ error: "You can only edit your own recipes" });
   }
 
-  const { title, ingredients, instructions, imageUrl, prepTimeMinutes, cookTimeMinutes } = req.body;
+  const { title, ingredients, instructions, cookTimeMin, tag, imageUrl, warningNote, servings, difficulty } = req.body;
 
   await recipesCollection().updateOne(
-    { _id: recipe._id },
+    { id: recipe.id },
     {
       $set: {
         title,
-        slug: slugify(title),
         ingredients,
-        ingredientCount: ingredients.length,
         instructions,
+        cookTimeMin: cookTimeMin || 0,
+        tag: tag || "Dinner",
         imageUrl,
-        prepTimeMinutes: prepTimeMinutes || 0,
-        cookTimeMinutes: cookTimeMinutes || 0,
-        totalTimeMinutes: (prepTimeMinutes || 0) + (cookTimeMinutes || 0),
+        warningNote,
+        servings,
+        difficulty,
         updatedAt: new Date(),
       },
     }
@@ -142,18 +144,14 @@ router.put("/:id", requireAuth, async (req, res) => {
 
 // DELETE /recipes/:id — requires login, only the original uploader can delete
 router.delete("/:id", requireAuth, async (req, res) => {
-  if (!ObjectId.isValid(req.params.id)) {
-    return res.status(400).json({ error: "Invalid recipe id" });
-  }
-
-  const recipe = await recipesCollection().findOne({ _id: new ObjectId(req.params.id) });
+  const recipe = await recipesCollection().findOne({ id: req.params.id });
   if (!recipe) return res.status(404).json({ error: "Recipe not found" });
   if (recipe.createdBy?.toString() !== req.user!.userId) {
     return res.status(403).json({ error: "You can only delete your own recipes" });
   }
 
-  await recipesCollection().deleteOne({ _id: recipe._id });
-  await favoritesCollection().deleteMany({ recipeId: recipe._id }); // clean up orphaned favorites
+  await recipesCollection().deleteOne({ id: recipe.id });
+  await favoritesCollection().deleteMany({ recipeId: recipe.id }); // clean up orphaned favorites
 
   res.json({ message: "Recipe deleted" });
 });

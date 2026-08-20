@@ -1,5 +1,5 @@
 import { MongoClient, Db, Collection } from "mongodb";
-import { Recipe, User, Favorite } from "./types";
+import { RecipeDocument, User, Favorite } from "./types";
 
 const uri = process.env.MONGO_URI || "mongodb://localhost:27017";
 const dbName = process.env.MONGO_DB_NAME || "indexCardRecipes";
@@ -20,8 +20,8 @@ export async function connectToDatabase(): Promise<Db> {
 
 // Typed collection getters — call these from routes instead of db.collection("recipes")
 // so every query is checked against the Recipe/User/Favorite interfaces.
-export function recipesCollection(): Collection<Recipe> {
-  return db.collection<Recipe>("recipes");
+export function recipesCollection(): Collection<RecipeDocument> {
+  return db.collection<RecipeDocument>("recipes");
 }
 
 export function usersCollection(): Collection<User> {

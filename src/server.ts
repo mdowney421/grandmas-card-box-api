@@ -26,8 +26,8 @@ async function start() {
 
   // Ensure indexes exist matching the query patterns (safe to call repeatedly — no-op if already present)
   await recipesCollection().createIndex({ title: "text" });
-  await recipesCollection().createIndex({ ingredientCount: 1 });
-  await recipesCollection().createIndex({ totalTimeMinutes: 1 });
+  await recipesCollection().createIndex({ cookTimeMin: 1 });
+  await recipesCollection().createIndex({ id: 1 }, { unique: true });
   await favoritesCollection().createIndex({ userId: 1, recipeId: 1 }, { unique: true });
 
   app.listen(PORT, () => {
