@@ -1,7 +1,9 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import swaggerUi from "swagger-ui-express";
 import { connectToDatabase, recipesCollection, favoritesCollection } from "./db";
+import openapiDocument from "./openapi";
 import recipesRouter from "./routes/recipes";
 import authRouter from "./routes/auth";
 import favoritesRouter from "./routes/favorites";
@@ -11,6 +13,7 @@ const PORT = process.env.PORT || 4000;
 
 app.use(cors());
 app.use(express.json());
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
 
 app.use("/recipes", recipesRouter);
 app.use("/auth", authRouter);
