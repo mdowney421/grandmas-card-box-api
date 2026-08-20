@@ -48,7 +48,7 @@ router.get("/", attachUserIfPresent, async (req, res) => {
     filter.$expr = { $lte: [{ $size: "$ingredients" }, Number(maxIngredients)] };
   }
   if (maxTime) {
-    filter.cookTimeMin = { $lte: Number(maxTime) };
+    filter.totalTimeMin = { $lte: Number(maxTime) };
   }
 
   const recipes = await recipesCollection().find(filter).limit(50).toArray();
@@ -82,15 +82,19 @@ router.post("/", requireAuth, async (req, res) => {
   const validationError = validateRecipeInput(req.body);
   if (validationError) return res.status(400).json({ error: validationError });
 
-  const { title, ingredients, instructions, cookTimeMin, tag, imageUrl, warningNote, servings, difficulty } = req.body;
+  const { title, ingredients, instructions, prepTimeMin, cookTimeMin, tag, imageUrl, warningNote, servings, difficulty } = req.body;
   const now = new Date();
+  const normalizedPrepTimeMin = prepTimeMin || 0;
+  const normalizedCookTimeMin = cookTimeMin || 0;
 
   const newRecipe: RecipeDocument = {
     id: new ObjectId().toHexString(),
     title,
     ingredients,
     instructions,
-    cookTimeMin: cookTimeMin || 0,
+    prepTimeMin: normalizedPrepTimeMin,
+    cookTimeMin: normalizedCookTimeMin,
+    totalTimeMin: normalizedPrepTimeMin + normalizedCookTimeMin,
     tag: tag || "Dinner",
     imageUrl,
     warningNote,
@@ -119,7 +123,9 @@ router.put("/:id", requireAuth, async (req, res) => {
     return res.status(403).json({ error: "You can only edit your own recipes" });
   }
 
-  const { title, ingredients, instructions, cookTimeMin, tag, imageUrl, warningNote, servings, difficulty } = req.body;
+  const { title, ingredients, instructions, prepTimeMin, cookTimeMin, tag, imageUrl, warningNote, servings, difficulty } = req.body;
+  const normalizedPrepTimeMin = prepTimeMin || 0;
+  const normalizedCookTimeMin = cookTimeMin || 0;
 
   await recipesCollection().updateOne(
     { id: recipe.id },
@@ -128,7 +134,9 @@ router.put("/:id", requireAuth, async (req, res) => {
         title,
         ingredients,
         instructions,
-        cookTimeMin: cookTimeMin || 0,
+        prepTimeMin: normalizedPrepTimeMin,
+        cookTimeMin: normalizedCookTimeMin,
+        totalTimeMin: normalizedPrepTimeMin + normalizedCookTimeMin,
         tag: tag || "Dinner",
         imageUrl,
         warningNote,

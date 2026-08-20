@@ -5,7 +5,9 @@ export interface Recipe {
   title: string;
   ingredients: string[]; // max 10, enforced in validation
   instructions: string[]; // max 10, enforced in validation
+  prepTimeMin: number;
   cookTimeMin: number;
+  totalTimeMin: number;
   tag: string;
   imageUrl?: string;
   warningNote?: string;
