@@ -6,6 +6,10 @@ import { JWT_SECRET } from "../middleware/auth";
 
 const router = Router();
 
+function authResponse(token: string, email: string, displayName: string) {
+  return { token, user: { email, displayName } };
+}
+
 // POST /auth/signup
 router.post("/signup", async (req, res) => {
   const { email, password, displayName } = req.body;
@@ -34,7 +38,7 @@ router.post("/signup", async (req, res) => {
     { expiresIn: "7d" }
   );
 
-  res.status(201).json({ token });
+  res.status(201).json(authResponse(token, email, displayName));
 });
 
 // POST /auth/login
@@ -62,7 +66,7 @@ router.post("/login", async (req, res) => {
     { expiresIn: "7d" }
   );
 
-  res.json({ token });
+  res.json(authResponse(token, user.email, user.displayName));
 });
 
 export default router;
