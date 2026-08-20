@@ -2,12 +2,16 @@ import { Router } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { usersCollection } from "../db";
-import { JWT_SECRET } from "../middleware/auth";
+import { JWT_SECRET, requireAuth } from "../middleware/auth";
 
 const router = Router();
 
 function authResponse(token: string, email: string, displayName: string) {
   return { token, user: { email, displayName } };
+}
+
+function userResponse(user: { email: string; displayName: string }) {
+  return { user: { email: user.email, displayName: user.displayName } };
 }
 
 // POST /auth/signup
@@ -67,6 +71,14 @@ router.post("/login", async (req, res) => {
   );
 
   res.json(authResponse(token, user.email, user.displayName));
+});
+
+// GET /auth/me - verify the current API session and return its user
+router.get("/me", requireAuth, async (req, res) => {
+  const user = await usersCollection().findOne({ email: req.user!.email });
+  if (!user) return res.status(401).json({ error: "User account not found" });
+
+  res.json(userResponse(user));
 });
 
 export default router;

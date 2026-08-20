@@ -2,7 +2,12 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import swaggerUi from "swagger-ui-express";
-import { connectToDatabase, recipesCollection, favoritesCollection } from "./db";
+import {
+  connectToDatabase,
+  recipesCollection,
+  favoritesCollection,
+  usersCollection,
+} from "./db";
 import openapiDocument from "./openapi";
 import recipesRouter from "./routes/recipes";
 import authRouter from "./routes/auth";
@@ -28,6 +33,7 @@ async function start() {
   await recipesCollection().createIndex({ title: "text" });
   await recipesCollection().createIndex({ cookTimeMin: 1 });
   await recipesCollection().createIndex({ id: 1 }, { unique: true });
+  await usersCollection().createIndex({ email: 1 }, { unique: true });
   await favoritesCollection().createIndex({ userId: 1, recipeId: 1 }, { unique: true });
 
   app.listen(PORT, () => {
