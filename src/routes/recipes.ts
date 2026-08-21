@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { ObjectId, Filter } from "mongodb";
-import { recipesCollection, favoritesCollection } from "../db";
+import { recipesCollection, favoritesCollection, usersCollection } from "../db";
 import { requireAuth, attachUserIfPresent } from "../middleware/auth";
 import { RecipeDocument } from "../types";
 
@@ -85,6 +85,8 @@ router.post("/", requireAuth, async (req, res) => {
   if (validationError) return res.status(400).json({ error: validationError });
 
   const { title, ingredients, instructions, prepTimeMin, cookTimeMin, tag, imageUrl, warningNote, servings, difficulty } = req.body;
+  const uploader = await usersCollection().findOne({ _id: new ObjectId(req.user!.userId) });
+  if (!uploader) return res.status(401).json({ error: "User account not found" });
   const now = new Date();
   const normalizedPrepTimeMin = prepTimeMin || 0;
   const normalizedCookTimeMin = cookTimeMin || 0;
@@ -106,6 +108,7 @@ router.post("/", requireAuth, async (req, res) => {
     isUserUpload: true,
     inMyBox: false,
     createdBy: new ObjectId(req.user!.userId),
+    createdByDisplayName: uploader.displayName,
     updatedAt: now,
     favoriteCount: 0,
   };

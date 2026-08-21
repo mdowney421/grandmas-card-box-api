@@ -21,6 +21,7 @@ export interface Recipe {
 export interface RecipeDocument extends Recipe {
   _id?: ObjectId;
   createdBy: ObjectId | null;
+  createdByDisplayName?: string;
   updatedAt: Date;
   favoriteCount: number;
 }

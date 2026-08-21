@@ -190,6 +190,12 @@ router.patch("/me", requireAuth, async (req, res) => {
   if (newPassword) updates.passwordHash = await bcrypt.hash(newPassword, 10);
 
   await usersCollection().updateOne({ _id: userId }, { $set: updates });
+  if (updates.displayName) {
+    await recipesCollection().updateMany(
+      { createdBy: userId },
+      { $set: { createdByDisplayName: updates.displayName } },
+    );
+  }
   return res.json(userResponse({
     email: user.email,
     displayName: updates.displayName || user.displayName,
