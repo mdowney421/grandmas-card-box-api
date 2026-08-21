@@ -76,21 +76,21 @@ const recipes: SeedRecipe[] = [
     title: "SHAKSHUKA",
     ingredients: ["2 tbsp olive oil", "1 onion, sliced", "1 bell pepper, sliced", "3 garlic cloves, minced", "1 tsp cumin", "1 can (28 oz) crushed tomatoes", "6 eggs", "Salt", "Black pepper", "Cilantro or parsley"],
     instructions: ["Heat oil in a wide skillet over medium heat.", "Cook onion and pepper for 8 minutes.", "Add garlic and cumin; cook 1 minute.", "Add tomatoes and simmer 10 minutes.", "Make six wells and crack in the eggs.", "Cover and cook 6 to 8 minutes, until whites set and yolks are still soft.", "Season and scatter with herbs."],
-    prepTimeMin: 10, cookTimeMin: 25, totalTimeMin: 35, tag: "Breakfast", servings: 4, difficulty: "trivial", createdAt: "2025-03-09T00:00:00.000Z", isUserUpload: false, inMyBox: false,
+    prepTimeMin: 10, cookTimeMin: 25, totalTimeMin: 35, tag: "Vegetarian", servings: 4, difficulty: "trivial", createdAt: "2025-03-09T00:00:00.000Z", isUserUpload: false, inMyBox: false,
   },
   {
     id: "seed-grilled-cheese-tomato-soup",
     title: "GRILLED CHEESE AND TOMATO SOUP",
     ingredients: ["2 tbsp butter", "1 onion, diced", "2 cans (14 oz each) tomatoes", "2 cups vegetable broth", "1/2 cup cream", "Salt", "Black pepper", "8 slices sandwich bread", "4 oz cheddar", "2 tbsp mayonnaise"],
     instructions: ["Melt 1 tbsp butter and cook onion for 6 minutes.", "Add tomatoes and broth; simmer 15 minutes.", "Blend until smooth, then stir in cream and season.", "Spread mayonnaise on the outside of each bread slice.", "Fill sandwiches with cheddar.", "Cook sandwiches in remaining butter over medium-low heat until golden on both sides.", "Serve with the soup."],
-    prepTimeMin: 10, cookTimeMin: 25, totalTimeMin: 35, tag: "Lunch", servings: 4, difficulty: "trivial", createdAt: "2025-03-16T00:00:00.000Z", isUserUpload: false, inMyBox: false,
+    prepTimeMin: 10, cookTimeMin: 25, totalTimeMin: 35, tag: "Vegetarian", servings: 4, difficulty: "trivial", createdAt: "2025-03-16T00:00:00.000Z", isUserUpload: false, inMyBox: false,
   },
   {
     id: "seed-pesto-pasta",
     title: "PESTO PASTA WITH CHERRY TOMATOES",
     ingredients: ["12 oz pasta", "1 cup basil pesto", "1 cup cherry tomatoes, halved", "1/2 cup pasta water", "1/4 cup Parmesan", "Salt", "Black pepper"],
     instructions: ["Cook pasta in salted water until al dente.", "Reserve 1/2 cup pasta water, then drain.", "Toss hot pasta with pesto and enough pasta water to make it glossy.", "Fold in tomatoes and Parmesan.", "Season with pepper and serve."],
-    prepTimeMin: 5, cookTimeMin: 12, totalTimeMin: 17, tag: "Quick Fix", servings: 4, difficulty: "trivial", createdAt: "2025-03-23T00:00:00.000Z", isUserUpload: false, inMyBox: false,
+    prepTimeMin: 5, cookTimeMin: 12, totalTimeMin: 17, tag: "Vegetarian", servings: 4, difficulty: "trivial", createdAt: "2025-03-23T00:00:00.000Z", isUserUpload: false, inMyBox: false,
   },
   {
     id: "seed-meatloaf",
@@ -104,7 +104,7 @@ const recipes: SeedRecipe[] = [
     title: "POTATO AND ONION FRITTATA",
     ingredients: ["8 eggs", "2 tbsp olive oil", "1 lb potatoes, thinly sliced", "1 onion, thinly sliced", "1/2 cup shredded cheddar", "Salt", "Black pepper"],
     instructions: ["Heat oven to 400 F.", "Whisk eggs with salt, pepper, and cheddar.", "Cook potatoes and onion in oil in an oven-safe skillet for 12 minutes.", "Pour eggs over the vegetables.", "Cook on the stove 3 minutes, until edges set.", "Bake 8 to 10 minutes, until the center is just set.", "Rest 5 minutes before slicing."],
-    prepTimeMin: 10, cookTimeMin: 30, totalTimeMin: 40, tag: "Breakfast", servings: 4, difficulty: "trivial", createdAt: "2025-04-06T00:00:00.000Z", isUserUpload: false, inMyBox: false,
+    prepTimeMin: 10, cookTimeMin: 30, totalTimeMin: 40, tag: "Vegetarian", servings: 4, difficulty: "trivial", createdAt: "2025-04-06T00:00:00.000Z", isUserUpload: false, inMyBox: false,
   },
   {
     id: "seed-chicken-curry",
@@ -132,7 +132,7 @@ const recipes: SeedRecipe[] = [
     title: "CREAMY MORNING OATMEAL",
     ingredients: ["1 cup rolled oats", "2 cups milk or water", "1/4 tsp salt", "1 banana, sliced", "1 tbsp maple syrup", "1/2 tsp cinnamon", "Chopped nuts"],
     instructions: ["Bring milk or water and salt to a simmer.", "Stir in oats and cook 5 minutes, stirring often.", "Stir in half the banana and cinnamon.", "Spoon into bowls and top with remaining banana, maple syrup, and nuts."],
-    prepTimeMin: 2, cookTimeMin: 5, totalTimeMin: 7, tag: "Breakfast", servings: 2, difficulty: "trivial", createdAt: "2025-05-04T00:00:00.000Z", isUserUpload: false, inMyBox: false,
+    prepTimeMin: 2, cookTimeMin: 5, totalTimeMin: 7, tag: "Vegetarian", servings: 2, difficulty: "trivial", createdAt: "2025-05-04T00:00:00.000Z", isUserUpload: false, inMyBox: false,
   },
   {
     id: "seed-garlic-shrimp",
@@ -160,7 +160,7 @@ const recipes: SeedRecipe[] = [
     title: "EASY APPLE CRISP",
     ingredients: ["5 apples, peeled and sliced", "1 tbsp lemon juice", "1/3 cup sugar", "1 tsp cinnamon", "1 cup rolled oats", "1/2 cup flour", "1/2 cup brown sugar", "1/2 cup cold butter, cubed", "1/2 tsp salt"],
     instructions: ["Heat oven to 375 F.", "Toss apples with lemon juice, sugar, and cinnamon in a baking dish.", "Mix oats, flour, brown sugar, and salt.", "Rub in butter until coarse crumbs form.", "Scatter topping over apples.", "Bake 35 to 45 minutes, until bubbling and golden.", "Cool 15 minutes before serving."],
-    prepTimeMin: 15, cookTimeMin: 40, totalTimeMin: 55, tag: "Staple", servings: 6, difficulty: "trivial", createdAt: "2025-06-01T00:00:00.000Z", isUserUpload: false, inMyBox: false,
+    prepTimeMin: 15, cookTimeMin: 40, totalTimeMin: 55, tag: "Dessert", servings: 6, difficulty: "trivial", createdAt: "2025-06-01T00:00:00.000Z", isUserUpload: false, inMyBox: false,
   },
   {
     id: "seed-pizza-dough",
@@ -195,7 +195,7 @@ const recipes: SeedRecipe[] = [
     title: "ONE-BOWL BANANA BREAD",
     ingredients: ["3 very ripe bananas", "1/2 cup melted butter", "3/4 cup brown sugar", "2 eggs", "1 tsp vanilla", "1 1/2 cups flour", "1 tsp baking soda", "1/2 tsp salt", "1/2 tsp cinnamon"],
     instructions: ["Heat oven to 350 F and grease a loaf pan.", "Mash bananas in a bowl.", "Whisk in butter, sugar, eggs, and vanilla.", "Fold in flour, baking soda, salt, and cinnamon until just combined.", "Pour into the pan.", "Bake 50 to 60 minutes, until a toothpick comes out mostly clean.", "Cool 15 minutes before slicing."],
-    prepTimeMin: 10, cookTimeMin: 55, totalTimeMin: 65, tag: "Staple", servings: 10, difficulty: "trivial", createdAt: "2025-07-06T00:00:00.000Z", isUserUpload: false, inMyBox: false,
+    prepTimeMin: 10, cookTimeMin: 55, totalTimeMin: 65, tag: "Dessert", servings: 10, difficulty: "trivial", createdAt: "2025-07-06T00:00:00.000Z", isUserUpload: false, inMyBox: false,
   },
 ];
 
