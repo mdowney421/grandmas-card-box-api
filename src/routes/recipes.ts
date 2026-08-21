@@ -32,7 +32,7 @@ function validateRecipeInput(body: any): string | null {
 }
 
 export function toPublicRecipe(recipe: RecipeDocument, inMyBox = false) {
-  const { _id, createdBy, updatedAt, favoriteCount, ...publicRecipe } = recipe;
+  const { _id, createdBy, updatedAt, ...publicRecipe } = recipe;
   return { ...publicRecipe, inMyBox };
 }
 
@@ -54,6 +54,10 @@ router.get("/", attachUserIfPresent, async (req, res) => {
   }
 
   const recipes = await recipesCollection().find(filter).limit(50).toArray();
+  for (let index = recipes.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [recipes[index], recipes[randomIndex]] = [recipes[randomIndex], recipes[index]];
+  }
 
   // If the request is authenticated, flag which of these are favorited
   // by the current user so the frontend can render filled/empty hearts.
