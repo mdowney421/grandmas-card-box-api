@@ -151,6 +151,51 @@ router.get("/me", requireAuth, async (req, res) => {
   res.json(userResponse(user));
 });
 
+// PATCH /auth/me - update the current user's display name and/or password
+router.patch("/me", requireAuth, async (req, res) => {
+  if (!ObjectId.isValid(req.user!.userId)) {
+    return res.status(401).json({ error: "Invalid user account" });
+  }
+
+  const displayName = typeof req.body.displayName === "string"
+    ? req.body.displayName.trim()
+    : "";
+  const currentPassword = typeof req.body.currentPassword === "string"
+    ? req.body.currentPassword
+    : "";
+  const newPassword = typeof req.body.newPassword === "string"
+    ? req.body.newPassword
+    : "";
+
+  if (!displayName && !newPassword) {
+    return res.status(400).json({ error: "Provide a display name or new password" });
+  }
+  if (displayName && (displayName.length < 2 || displayName.length > 50)) {
+    return res.status(400).json({ error: "Display name must be between 2 and 50 characters" });
+  }
+  if (newPassword && (!currentPassword || newPassword.length < 8)) {
+    return res.status(400).json({ error: "Current password is required and the new password must be at least 8 characters" });
+  }
+
+  const userId = new ObjectId(req.user!.userId);
+  const user = await usersCollection().findOne({ _id: userId });
+  if (!user) return res.status(404).json({ error: "User account not found" });
+
+  if (newPassword && !(await bcrypt.compare(currentPassword, user.passwordHash))) {
+    return res.status(401).json({ error: "Current password is incorrect" });
+  }
+
+  const updates: { displayName?: string; passwordHash?: string } = {};
+  if (displayName) updates.displayName = displayName;
+  if (newPassword) updates.passwordHash = await bcrypt.hash(newPassword, 10);
+
+  await usersCollection().updateOne({ _id: userId }, { $set: updates });
+  return res.json(userResponse({
+    email: user.email,
+    displayName: updates.displayName || user.displayName,
+  }));
+});
+
 // DELETE /auth/me - permanently remove the account and its owned data
 router.delete("/me", requireAuth, async (req, res) => {
   if (!ObjectId.isValid(req.user!.userId)) {

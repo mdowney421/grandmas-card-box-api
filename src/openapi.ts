@@ -190,6 +190,31 @@ const openapiDocument = {
           "401": { description: "Authentication required" },
         },
       },
+      patch: {
+        tags: ["Auth"],
+        summary: "Update the current user's display name or password",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  displayName: { type: "string", minLength: 2, maxLength: 50 },
+                  currentPassword: { type: "string", format: "password" },
+                  newPassword: { type: "string", format: "password", minLength: 8 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Account updated" },
+          "400": { description: "Invalid account update" },
+          "401": { description: "Authentication required or current password incorrect" },
+        },
+      },
     },
     "/recipes": {
       get: {
