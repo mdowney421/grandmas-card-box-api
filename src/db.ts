@@ -1,5 +1,5 @@
 import { MongoClient, Db, Collection } from "mongodb";
-import { RecipeDocument, User, Favorite } from "./types";
+import { RecipeDocument, User, Favorite, PasswordResetToken } from "./types";
 
 const uri = process.env.MONGO_URI || "mongodb://localhost:27017";
 const dbName = process.env.MONGO_DB_NAME || "indexCardRecipes";
@@ -30,4 +30,8 @@ export function usersCollection(): Collection<User> {
 
 export function favoritesCollection(): Collection<Favorite> {
   return db.collection<Favorite>("favorites");
+}
+
+export function passwordResetTokensCollection(): Collection<PasswordResetToken> {
+  return db.collection<PasswordResetToken>("passwordResetTokens");
 }

@@ -33,6 +33,14 @@ export interface User {
   createdAt: Date;
 }
 
+export interface PasswordResetToken {
+  _id?: ObjectId;
+  userId: ObjectId;
+  tokenHash: string;
+  expiresAt: Date;
+  createdAt: Date;
+}
+
 export interface Favorite {
   _id?: ObjectId;
   userId: ObjectId;
