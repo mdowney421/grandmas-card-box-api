@@ -13,6 +13,7 @@ import openapiDocument from "./openapi";
 import recipesRouter from "./routes/recipes";
 import authRouter from "./routes/auth";
 import favoritesRouter from "./routes/favorites";
+import { seed } from "./seed";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -26,6 +27,26 @@ app.use("/auth", authRouter);
 app.use("/favorites", favoritesRouter);
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
+
+app.post("/admin/seed", async (req, res) => {
+  const configuredSecret = process.env.SEED_SECRET;
+  const providedSecret = req.header("x-seed-secret");
+
+  if (!configuredSecret) {
+    return res.status(503).json({ error: "Seed endpoint is not configured" });
+  }
+  if (!providedSecret || providedSecret !== configuredSecret) {
+    return res.status(401).json({ error: "Invalid seed secret" });
+  }
+
+  try {
+    await seed();
+    return res.json({ message: "Seed recipes inserted or updated" });
+  } catch (error) {
+    console.error("Recipe seed failed:", error);
+    return res.status(500).json({ error: "Recipe seed failed" });
+  }
+});
 
 async function start() {
   await connectToDatabase();

@@ -75,6 +75,26 @@ const openapiDocument = {
         responses: { "200": { description: "API is healthy" } },
       },
     },
+    "/admin/seed": {
+      post: {
+        tags: ["Recipes"],
+        summary: "Seed the built-in recipe collection",
+        parameters: [
+          {
+            name: "x-seed-secret",
+            in: "header",
+            required: true,
+            schema: { type: "string", format: "password" },
+            description: "The SEED_SECRET configured on the API server.",
+          },
+        ],
+        responses: {
+          "200": { description: "Seed recipes inserted or updated" },
+          "401": { description: "Invalid seed secret" },
+          "503": { description: "Seed endpoint is not configured" },
+        },
+      },
+    },
     "/auth/signup": {
       post: {
         tags: ["Auth"],
