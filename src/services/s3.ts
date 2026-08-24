@@ -1,9 +1,10 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomUUID } from "crypto";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 const BUCKET_NAME = process.env.S3_BUCKET_NAME;
+const PUBLIC_URL_PREFIX = `https://${BUCKET_NAME}.s3.${REGION}.amazonaws.com/`;
 
 const ALLOWED_CONTENT_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -49,4 +50,14 @@ export async function createPresignedDownloadUrl(key: string): Promise<string> {
 
   const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key });
   return getSignedUrl(s3Client, command, { expiresIn: 3600 });
+}
+
+// Deletes the photo behind a recipe's imageUrl, if it points at our bucket.
+export async function deleteImageByUrl(imageUrl: string): Promise<void> {
+  if (!BUCKET_NAME || !imageUrl.startsWith(PUBLIC_URL_PREFIX)) {
+    return;
+  }
+
+  const key = imageUrl.slice(PUBLIC_URL_PREFIX.length);
+  await s3Client.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: key }));
 }

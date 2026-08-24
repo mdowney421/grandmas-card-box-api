@@ -3,6 +3,7 @@ import { ObjectId, Filter } from "mongodb";
 import { recipesCollection, favoritesCollection, usersCollection } from "../db";
 import { requireAuth, attachUserIfPresent } from "../middleware/auth";
 import { RecipeDocument } from "../types";
+import { deleteImageByUrl } from "../services/s3";
 
 const router = Router();
 
@@ -136,6 +137,12 @@ router.put("/:id", requireAuth, async (req, res) => {
   const normalizedPrepTimeMin = prepTimeMin || 0;
   const normalizedCookTimeMin = cookTimeMin || 0;
 
+  if (recipe.imageUrl && recipe.imageUrl !== imageUrl) {
+    await deleteImageByUrl(recipe.imageUrl).catch((error) =>
+      console.error("Failed to delete replaced recipe image", error),
+    );
+  }
+
   await recipesCollection().updateOne(
     { id: recipe.id },
     {
@@ -169,6 +176,12 @@ router.delete("/:id", requireAuth, async (req, res) => {
 
   await recipesCollection().deleteOne({ id: recipe.id });
   await favoritesCollection().deleteMany({ recipeId: recipe.id }); // clean up orphaned favorites
+
+  if (recipe.imageUrl) {
+    await deleteImageByUrl(recipe.imageUrl).catch((error) =>
+      console.error("Failed to delete recipe image", error),
+    );
+  }
 
   res.json({ message: "Recipe deleted" });
 });
