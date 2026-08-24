@@ -16,9 +16,9 @@ export async function sendPasswordResetEmail(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: process.env.EMAIL_FROM || "Index Card Recipes <onboarding@resend.dev>",
+      from: process.env.EMAIL_FROM,
       to: [email],
-      subject: "Reset your Index Card Recipes password",
+      subject: "Grandma's Card Box Password Reset Link",
       html: `<p>Hi ${escapeHtml(displayName)},</p><p>Reset your password using this link:</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>This link expires in 30 minutes.</p>`,
     }),
   });

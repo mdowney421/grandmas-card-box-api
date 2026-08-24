@@ -1,2 +1,3 @@
 # index-card-recipes-api
-API for Index Card Recipes
+
+API for Grandma's Card Box

@@ -1,7 +1,7 @@
 const openapiDocument = {
   openapi: "3.0.3",
   info: {
-    title: "Index Card Recipes API",
+    title: "Grandma's Card Box API",
     version: "1.0.0",
     description: "API for discovering, creating, and favoriting recipes.",
   },
