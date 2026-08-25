@@ -7,7 +7,7 @@ REPOSITORY="grandmas-card-box-api-lambda"
 REGISTRY="$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com"
 TAG="$(git rev-parse --short HEAD)"
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$REGISTRY"
 
