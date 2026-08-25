@@ -11,7 +11,7 @@ cd "$(dirname "$0")/.."
 
 aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$REGISTRY"
 
-docker build --platform linux/amd64 -f Dockerfile.lambda \
+docker build --platform linux/amd64 --provenance=false --sbom=false -f Dockerfile.lambda \
   -t "$REGISTRY/$REPOSITORY:$TAG" \
   -t "$REGISTRY/$REPOSITORY:latest" .
 
