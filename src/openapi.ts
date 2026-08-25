@@ -191,6 +191,40 @@ const openapiDocument = {
         },
       },
     },
+    "/auth/verify-email": {
+      post: {
+        tags: ["Auth"],
+        summary: "Confirm an email address using a verification token",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["token"],
+                properties: { token: { type: "string" } },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Email verified" },
+          "400": { description: "Invalid or expired verification token" },
+        },
+      },
+    },
+    "/auth/resend-verification": {
+      post: {
+        tags: ["Auth"],
+        summary: "Resend the email verification link to the current user",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": { description: "Verification email sent" },
+          "400": { description: "Email is already verified" },
+          "401": { description: "Authentication required" },
+        },
+      },
+    },
     "/auth/me": {
       get: {
         tags: ["Auth"],

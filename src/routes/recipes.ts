@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { ObjectId, Filter } from "mongodb";
 import { recipesCollection, favoritesCollection, usersCollection } from "../db";
-import { requireAuth, attachUserIfPresent } from "../middleware/auth";
+import { requireAuth, requireVerifiedEmail, attachUserIfPresent } from "../middleware/auth";
 import { RecipeDocument } from "../types";
 import { deleteImageByUrl } from "../services/s3";
 
@@ -85,7 +85,7 @@ router.get("/:id", attachUserIfPresent, async (req, res) => {
 });
 
 // POST /recipes — requires login
-router.post("/", requireAuth, async (req, res) => {
+router.post("/", requireAuth, requireVerifiedEmail, async (req, res) => {
   const validationError = validateRecipeInput(req.body);
   if (validationError) return res.status(400).json({ error: validationError });
 
@@ -123,7 +123,7 @@ router.post("/", requireAuth, async (req, res) => {
 });
 
 // PUT /recipes/:id — requires login, only the original uploader can edit
-router.put("/:id", requireAuth, async (req, res) => {
+router.put("/:id", requireAuth, requireVerifiedEmail, async (req, res) => {
   const validationError = validateRecipeInput(req.body);
   if (validationError) return res.status(400).json({ error: validationError });
 
@@ -167,7 +167,7 @@ router.put("/:id", requireAuth, async (req, res) => {
 });
 
 // DELETE /recipes/:id — requires login, only the original uploader can delete
-router.delete("/:id", requireAuth, async (req, res) => {
+router.delete("/:id", requireAuth, requireVerifiedEmail, async (req, res) => {
   const recipe = await recipesCollection().findOne({ id: req.params.id });
   if (!recipe) return res.status(404).json({ error: "Recipe not found" });
   if (recipe.createdBy?.toString() !== req.user!.userId) {

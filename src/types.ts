@@ -32,9 +32,18 @@ export interface User {
   passwordHash: string;
   displayName: string;
   createdAt: Date;
+  emailVerified: boolean;
 }
 
 export interface PasswordResetToken {
+  _id?: ObjectId;
+  userId: ObjectId;
+  tokenHash: string;
+  expiresAt: Date;
+  createdAt: Date;
+}
+
+export interface EmailVerificationToken {
   _id?: ObjectId;
   userId: ObjectId;
   tokenHash: string;

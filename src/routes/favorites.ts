@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { ObjectId } from "mongodb";
 import { favoritesCollection, recipesCollection } from "../db";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, requireVerifiedEmail } from "../middleware/auth";
 import { toPublicRecipe } from "./recipes";
 
 const router = Router();
 
-// All favorites routes require login — only logged-in users have favorites.
-router.use(requireAuth);
+// All favorites routes require a verified login — only verified users have favorites.
+router.use(requireAuth, requireVerifiedEmail);
 
 // GET /favorites — list the current user's favorited recipes (joined with recipe data)
 router.get("/", async (req, res) => {

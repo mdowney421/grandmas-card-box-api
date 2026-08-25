@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { AuthTokenPayload } from "../types";
+import { usersCollection } from "../db";
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 
@@ -21,6 +22,16 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   } catch {
     return res.status(401).json({ error: "Invalid or expired token" });
   }
+}
+
+// Use after requireAuth on routes only a verified account can hit (upload recipe,
+// favorite/unfavorite). An unverified account is blocked the same as a logged-out one.
+export async function requireVerifiedEmail(req: Request, res: Response, next: NextFunction) {
+  const user = await usersCollection().findOne({ email: req.user!.email });
+  if (!user || !user.emailVerified) {
+    return res.status(403).json({ error: "Please verify your email to continue" });
+  }
+  next();
 }
 
 // Doesn't block the request if there's no token, but attaches req.user if there is one.

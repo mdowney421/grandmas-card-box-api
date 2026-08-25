@@ -28,6 +28,36 @@ export async function sendPasswordResetEmail(
   }
 }
 
+export async function sendVerificationEmail(
+  email: string,
+  displayName: string,
+  verifyUrl: string,
+): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.log(`Email verification link for ${email}: ${verifyUrl}`);
+    return;
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: process.env.EMAIL_FROM,
+      to: [email],
+      subject: "Verify your Grandma's Card Box email",
+      html: `<p>Hi ${escapeHtml(displayName)},</p><p>Confirm your email address using this link:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p><p>This link expires in 24 hours.</p>`,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Verification email failed (${response.status})`);
+  }
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => ({
     "&": "&amp;",

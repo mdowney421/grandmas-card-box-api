@@ -4,26 +4,57 @@ import jwt from "jsonwebtoken";
 import { createHash, randomBytes } from "crypto";
 import { ObjectId } from "mongodb";
 import {
+  emailVerificationTokensCollection,
   favoritesCollection,
   passwordResetTokensCollection,
   recipesCollection,
   usersCollection,
 } from "../db";
 import { JWT_SECRET, requireAuth } from "../middleware/auth";
-import { sendPasswordResetEmail } from "../services/email";
+import { sendPasswordResetEmail, sendVerificationEmail } from "../services/email";
 
 const router = Router();
 
-function authResponse(token: string, email: string, displayName: string) {
-  return { token, user: { email, displayName } };
+const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+
+function authResponse(
+  token: string,
+  email: string,
+  displayName: string,
+  emailVerified: boolean,
+) {
+  return { token, user: { email, displayName, emailVerified } };
 }
 
-function userResponse(user: { email: string; displayName: string }) {
-  return { user: { email: user.email, displayName: user.displayName } };
+function userResponse(user: { email: string; displayName: string; emailVerified: boolean }) {
+  return {
+    user: {
+      email: user.email,
+      displayName: user.displayName,
+      emailVerified: Boolean(user.emailVerified),
+    },
+  };
 }
 
-function hashResetToken(token: string): string {
+function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
+}
+
+async function issueVerificationEmail(userId: ObjectId, email: string, displayName: string) {
+  const rawToken = randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS);
+  const tokens = emailVerificationTokensCollection();
+
+  await tokens.deleteMany({ userId });
+  await tokens.insertOne({
+    userId,
+    tokenHash: hashToken(rawToken),
+    expiresAt,
+    createdAt: new Date(),
+  });
+
+  const verifyUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/verify-email?token=${rawToken}`;
+  await sendVerificationEmail(email, displayName, verifyUrl);
 }
 
 // POST /auth/signup
@@ -47,6 +78,7 @@ router.post("/signup", async (req, res) => {
     passwordHash,
     displayName,
     createdAt: new Date(),
+    emailVerified: false,
   });
 
   const token = jwt.sign(
@@ -55,7 +87,14 @@ router.post("/signup", async (req, res) => {
     { expiresIn: "7d" }
   );
 
-  res.status(201).json(authResponse(token, email, displayName));
+  try {
+    await issueVerificationEmail(result.insertedId, email, displayName);
+  } catch (error) {
+    // Don't fail signup if the verification email can't be sent — the user can request another.
+    console.error("Failed to send verification email:", error);
+  }
+
+  res.status(201).json(authResponse(token, email, displayName, false));
 });
 
 // POST /auth/login
@@ -84,7 +123,7 @@ router.post("/login", async (req, res) => {
     { expiresIn: "7d" }
   );
 
-  res.json(authResponse(token, user.email, user.displayName));
+  res.json(authResponse(token, user.email, user.displayName, Boolean(user.emailVerified)));
 });
 
 // POST /auth/forgot-password
@@ -106,7 +145,7 @@ router.post("/forgot-password", async (req, res) => {
   await tokens.deleteMany({ userId: user._id });
   await tokens.insertOne({
     userId: user._id,
-    tokenHash: hashResetToken(rawToken),
+    tokenHash: hashToken(rawToken),
     expiresAt,
     createdAt: new Date(),
   });
@@ -132,7 +171,7 @@ router.post("/reset-password", async (req, res) => {
   }
 
   const resetToken = await passwordResetTokensCollection().findOne({
-    tokenHash: hashResetToken(token),
+    tokenHash: hashToken(token),
     expiresAt: { $gt: new Date() },
   });
   if (!resetToken) return res.status(400).json({ error: "This password reset link is invalid or expired" });
@@ -146,6 +185,48 @@ router.post("/reset-password", async (req, res) => {
 
   if (result.matchedCount === 0) return res.status(400).json({ error: "This password reset link is invalid or expired" });
   return res.json({ message: "Password updated successfully" });
+});
+
+// POST /auth/verify-email
+router.post("/verify-email", async (req, res) => {
+  const token = typeof req.body.token === "string" ? req.body.token : "";
+  if (!token) return res.status(400).json({ error: "A verification token is required" });
+
+  const verificationToken = await emailVerificationTokensCollection().findOne({
+    tokenHash: hashToken(token),
+    expiresAt: { $gt: new Date() },
+  });
+  if (!verificationToken) {
+    return res.status(400).json({ error: "This verification link is invalid or expired" });
+  }
+
+  const result = await usersCollection().updateOne(
+    { _id: verificationToken.userId },
+    { $set: { emailVerified: true } },
+  );
+  await emailVerificationTokensCollection().deleteMany({ userId: verificationToken.userId });
+
+  if (result.matchedCount === 0) return res.status(400).json({ error: "This verification link is invalid or expired" });
+  return res.json({ message: "Email verified successfully" });
+});
+
+// POST /auth/resend-verification
+router.post("/resend-verification", requireAuth, async (req, res) => {
+  const user = await usersCollection().findOne({ email: req.user!.email });
+  if (!user || !user._id) return res.status(404).json({ error: "User account not found" });
+
+  if (user.emailVerified) {
+    return res.status(400).json({ error: "This email address is already verified" });
+  }
+
+  try {
+    await issueVerificationEmail(user._id, user.email, user.displayName);
+  } catch (error) {
+    console.error("Failed to send verification email:", error);
+    return res.status(500).json({ error: "Failed to send verification email" });
+  }
+
+  return res.json({ message: "Verification email sent" });
 });
 
 // GET /auth/me - verify the current API session and return its user
@@ -204,6 +285,7 @@ router.patch("/me", requireAuth, async (req, res) => {
   return res.json(userResponse({
     email: user.email,
     displayName: updates.displayName || user.displayName,
+    emailVerified: Boolean(user.emailVerified),
   }));
 });
 
@@ -224,6 +306,7 @@ router.delete("/me", requireAuth, async (req, res) => {
     await favoritesCollection().deleteMany({ recipeId: { $in: recipeIds } });
   }
   await recipesCollection().deleteMany({ createdBy: userId });
+  await emailVerificationTokensCollection().deleteMany({ userId });
 
   const result = await usersCollection().deleteOne({ _id: userId });
   if (result.deletedCount === 0) {
