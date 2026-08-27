@@ -58,6 +58,41 @@ export async function sendVerificationEmail(
   }
 }
 
+export async function sendFeedbackEmail(
+  typeLabel: string,
+  message: string,
+  fromEmail?: string,
+): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const to = process.env.FEEDBACK_TO_EMAIL;
+
+  if (!apiKey || !to) {
+    console.log(
+      `Feedback (${typeLabel})${fromEmail ? ` from ${fromEmail}` : ""}: ${message}`,
+    );
+    return;
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: process.env.EMAIL_FROM,
+      to: [to],
+      reply_to: fromEmail || undefined,
+      subject: `Grandma's Card Box feedback: ${typeLabel}`,
+      html: `<p><strong>${escapeHtml(typeLabel)}</strong>${fromEmail ? ` from ${escapeHtml(fromEmail)}` : ""}</p><p>${escapeHtml(message).replace(/\n/g, "<br>")}</p>`,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Feedback email failed (${response.status})`);
+  }
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => ({
     "&": "&amp;",

@@ -6,6 +6,7 @@ import recipesRouter from "./routes/recipes";
 import authRouter from "./routes/auth";
 import favoritesRouter from "./routes/favorites";
 import uploadsRouter from "./routes/uploads";
+import feedbackRouter from "./routes/feedback";
 import { seed } from "./seed";
 
 export const app = express();
@@ -34,6 +35,7 @@ app.use("/recipes", recipesRouter);
 app.use("/auth", authRouter);
 app.use("/favorites", favoritesRouter);
 app.use("/uploads", uploadsRouter);
+app.use("/feedback", feedbackRouter);
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
