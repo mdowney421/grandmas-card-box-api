@@ -10,9 +10,13 @@ import { seed } from "./seed";
 
 export const app = express();
 
-// Restrict cross-origin requests to the configured frontend when set;
-// falls back to allowing any origin for local development.
-app.use(cors(process.env.FRONTEND_URL ? { origin: process.env.FRONTEND_URL } : undefined));
+// Restrict cross-origin requests to the configured frontend(s) when set
+// (comma-separated for multiple, e.g. the deployed frontend plus a local dev
+// origin); falls back to allowing any origin for local development.
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(",").map((origin) => origin.trim())
+  : undefined;
+app.use(cors(allowedOrigins ? { origin: allowedOrigins } : undefined));
 app.use(express.json());
 
 // Point "Try it out" at whatever host actually served this request, so the
