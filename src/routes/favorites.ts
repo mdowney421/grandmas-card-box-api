@@ -20,7 +20,11 @@ router.get("/", async (req, res) => {
     .find({ id: { $in: recipeIds } })
     .toArray();
 
-  res.json(recipes.map((recipe) => toPublicRecipe(recipe, true)));
+  res.json(
+    recipes.map((recipe) =>
+      toPublicRecipe(recipe, true, recipe.createdBy?.toString() === req.user!.userId)
+    )
+  );
 });
 
 // POST /favorites/:recipeId — favorite a recipe

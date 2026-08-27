@@ -10,7 +10,9 @@ import { seed } from "./seed";
 
 export const app = express();
 
-app.use(cors());
+// Restrict cross-origin requests to the configured frontend when set;
+// falls back to allowing any origin for local development.
+app.use(cors(process.env.FRONTEND_URL ? { origin: process.env.FRONTEND_URL } : undefined));
 app.use(express.json());
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
 

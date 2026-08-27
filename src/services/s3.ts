@@ -1,10 +1,12 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { randomUUID } from "crypto";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 const BUCKET_NAME = process.env.S3_BUCKET_NAME;
 const PUBLIC_URL_PREFIX = `https://${BUCKET_NAME}.s3.${REGION}.amazonaws.com/`;
+const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // 8 MB — plenty for a recipe photo
 
 const ALLOWED_CONTENT_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -18,11 +20,12 @@ export function isAllowedImageContentType(contentType: string): boolean {
   return contentType in ALLOWED_CONTENT_TYPES;
 }
 
-// Presigned PUT URL so the browser can upload the photo directly to S3,
-// bypassing API Gateway/Lambda payload size limits.
+// Presigned POST policy so the browser can upload the photo directly to S3,
+// bypassing API Gateway/Lambda payload size limits, while S3 itself enforces
+// the content type and a max file size (a plain presigned PUT URL can't cap size).
 export async function createPresignedUploadUrl(
   contentType: string,
-): Promise<{ uploadUrl: string; publicUrl: string; key: string }> {
+): Promise<{ uploadUrl: string; fields: Record<string, string>; publicUrl: string; key: string }> {
   if (!BUCKET_NAME) {
     throw new Error("S3_BUCKET_NAME is not configured");
   }
@@ -30,16 +33,22 @@ export async function createPresignedUploadUrl(
   const extension = ALLOWED_CONTENT_TYPES[contentType];
   const key = `recipes/${randomUUID()}.${extension}`;
 
-  const command = new PutObjectCommand({
+  const { url, fields } = await createPresignedPost(s3Client, {
     Bucket: BUCKET_NAME,
     Key: key,
-    ContentType: contentType,
+    Conditions: [
+      ["content-length-range", 0, MAX_UPLOAD_BYTES],
+      ["eq", "$Content-Type", contentType],
+    ],
+    Fields: {
+      "Content-Type": contentType,
+    },
+    Expires: 300,
   });
 
-  const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
   const publicUrl = `https://${BUCKET_NAME}.s3.${REGION}.amazonaws.com/${key}`;
 
-  return { uploadUrl, publicUrl, key };
+  return { uploadUrl: url, fields, publicUrl, key };
 }
 
 // Presigned GET URL for retrieving a photo without making the bucket public.

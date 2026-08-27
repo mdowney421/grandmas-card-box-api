@@ -5,6 +5,7 @@ import {
   favoritesCollection,
   usersCollection,
   passwordResetTokensCollection,
+  emailVerificationTokensCollection,
 } from "./db";
 import { app } from "./app";
 
@@ -21,6 +22,8 @@ async function start() {
   await favoritesCollection().createIndex({ userId: 1, recipeId: 1 }, { unique: true });
   await passwordResetTokensCollection().createIndex({ tokenHash: 1 }, { unique: true });
   await passwordResetTokensCollection().createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+  await emailVerificationTokensCollection().createIndex({ tokenHash: 1 }, { unique: true });
+  await emailVerificationTokensCollection().createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
   app.listen(PORT, () => {
     console.log(`API running on http://localhost:${PORT}`);

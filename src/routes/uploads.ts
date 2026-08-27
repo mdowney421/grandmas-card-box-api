@@ -18,8 +18,8 @@ router.post("/presign", requireAuth, requireVerifiedEmail, async (req, res) => {
   }
 
   try {
-    const { uploadUrl, publicUrl, key } = await createPresignedUploadUrl(contentType);
-    res.json({ uploadUrl, publicUrl, key });
+    const { uploadUrl, fields, publicUrl, key } = await createPresignedUploadUrl(contentType);
+    res.json({ uploadUrl, fields, publicUrl, key });
   } catch (error) {
     console.error("Failed to create presigned upload URL", error);
     res.status(500).json({ error: "Failed to create upload URL" });

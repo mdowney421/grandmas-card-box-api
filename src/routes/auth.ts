@@ -11,11 +11,17 @@ import {
   usersCollection,
 } from "../db";
 import { JWT_SECRET, requireAuth } from "../middleware/auth";
+import { rateLimit } from "../middleware/rateLimit";
 import { sendPasswordResetEmail, sendVerificationEmail } from "../services/email";
 
 const router = Router();
 
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+
+// Auth endpoints that could otherwise be used to brute-force logins or
+// email-bomb an address get a per-IP-per-route limit.
+const authAttemptLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
+const emailSendLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 5 });
 
 function authResponse(
   token: string,
@@ -58,7 +64,7 @@ async function issueVerificationEmail(userId: ObjectId, email: string, displayNa
 }
 
 // POST /auth/signup
-router.post("/signup", async (req, res) => {
+router.post("/signup", authAttemptLimit, async (req, res) => {
   const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const { password, displayName } = req.body;
 
@@ -98,7 +104,7 @@ router.post("/signup", async (req, res) => {
 });
 
 // POST /auth/login
-router.post("/login", async (req, res) => {
+router.post("/login", authAttemptLimit, async (req, res) => {
   const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const { password } = req.body;
 
@@ -127,7 +133,7 @@ router.post("/login", async (req, res) => {
 });
 
 // POST /auth/forgot-password
-router.post("/forgot-password", async (req, res) => {
+router.post("/forgot-password", emailSendLimit, async (req, res) => {
   const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const genericResponse = {
     message: "If an account exists for that email, a password reset link has been sent.",
@@ -211,7 +217,7 @@ router.post("/verify-email", async (req, res) => {
 });
 
 // POST /auth/resend-verification
-router.post("/resend-verification", requireAuth, async (req, res) => {
+router.post("/resend-verification", emailSendLimit, requireAuth, async (req, res) => {
   const user = await usersCollection().findOne({ email: req.user!.email });
   if (!user || !user._id) return res.status(404).json({ error: "User account not found" });
 

@@ -3,6 +3,10 @@ import jwt from "jsonwebtoken";
 import { AuthTokenPayload } from "../types";
 import { usersCollection } from "../db";
 
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("JWT_SECRET must be set in production — refusing to start with a guessable default");
+}
+
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 
 // Requires a valid token — use on routes only logged-in users can hit
