@@ -1,8 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import { createHash, randomBytes } from "crypto";
-import { ObjectId } from "mongodb";
+import { Collection, ObjectId } from "mongodb";
 import {
   emailVerificationTokensCollection,
   favoritesCollection,
@@ -10,13 +9,15 @@ import {
   recipesCollection,
   usersCollection,
 } from "../db";
-import { JWT_SECRET, requireAuth } from "../middleware/auth";
+import { signAuthToken, requireAuth, loadCurrentUser } from "../middleware/auth";
 import { rateLimit } from "../middleware/rateLimit";
+import { AuthToken } from "../types";
 import { sendPasswordResetEmail, sendVerificationEmail } from "../services/email";
 
 const router = Router();
 
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
 
 // Auth endpoints that could otherwise be used to brute-force logins or
 // email-bomb an address get a per-IP-per-route limit.
@@ -42,30 +43,40 @@ function userResponse(user: { email: string; displayName: string; emailVerified:
   };
 }
 
+function normalizeEmail(value: unknown): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-async function issueVerificationEmail(userId: ObjectId, email: string, displayName: string) {
+// Issues a fresh single-use token for a user, replacing any of theirs still
+// outstanding in the same collection. Shared by the password-reset and
+// email-verification flows, which are otherwise identical in shape.
+async function issueToken<T extends AuthToken>(
+  tokens: Collection<T>,
+  userId: ObjectId,
+  ttlMs: number,
+): Promise<string> {
   const rawToken = randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS);
-  const tokens = emailVerificationTokensCollection();
+  const expiresAt = new Date(Date.now() + ttlMs);
 
-  await tokens.deleteMany({ userId });
-  await tokens.insertOne({
-    userId,
-    tokenHash: hashToken(rawToken),
-    expiresAt,
-    createdAt: new Date(),
-  });
+  await tokens.deleteMany({ userId } as any);
+  await tokens.insertOne({ userId, tokenHash: hashToken(rawToken), expiresAt, createdAt: new Date() } as any);
 
+  return rawToken;
+}
+
+async function issueVerificationEmail(userId: ObjectId, email: string, displayName: string) {
+  const rawToken = await issueToken(emailVerificationTokensCollection(), userId, EMAIL_VERIFICATION_TTL_MS);
   const verifyUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/verify-email?token=${rawToken}`;
   await sendVerificationEmail(email, displayName, verifyUrl);
 }
 
 // POST /auth/signup
 router.post("/signup", authAttemptLimit, async (req, res) => {
-  const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const email = normalizeEmail(req.body.email);
   const { password, displayName } = req.body;
 
   if (!email || !password || !displayName) {
@@ -87,11 +98,7 @@ router.post("/signup", authAttemptLimit, async (req, res) => {
     emailVerified: false,
   });
 
-  const token = jwt.sign(
-    { userId: result.insertedId.toString(), email },
-    JWT_SECRET,
-    { expiresIn: "7d" }
-  );
+  const token = signAuthToken({ userId: result.insertedId.toString(), email });
 
   try {
     await issueVerificationEmail(result.insertedId, email, displayName);
@@ -105,7 +112,7 @@ router.post("/signup", authAttemptLimit, async (req, res) => {
 
 // POST /auth/login
 router.post("/login", authAttemptLimit, async (req, res) => {
-  const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const email = normalizeEmail(req.body.email);
   const { password } = req.body;
 
   if (!email || !password) {
@@ -123,18 +130,14 @@ router.post("/login", authAttemptLimit, async (req, res) => {
     return res.status(401).json({ error: "Invalid email or password" });
   }
 
-  const token = jwt.sign(
-    { userId: user._id!.toString(), email: user.email },
-    JWT_SECRET,
-    { expiresIn: "7d" }
-  );
+  const token = signAuthToken({ userId: user._id!.toString(), email: user.email });
 
   res.json(authResponse(token, user.email, user.displayName, Boolean(user.emailVerified)));
 });
 
 // POST /auth/forgot-password
 router.post("/forgot-password", emailSendLimit, async (req, res) => {
-  const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const email = normalizeEmail(req.body.email);
   const genericResponse = {
     message: "If an account exists for that email, a password reset link has been sent.",
   };
@@ -144,18 +147,7 @@ router.post("/forgot-password", emailSendLimit, async (req, res) => {
   const user = await usersCollection().findOne({ email });
   if (!user || !user._id) return res.json(genericResponse);
 
-  const rawToken = randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
-  const tokens = passwordResetTokensCollection();
-
-  await tokens.deleteMany({ userId: user._id });
-  await tokens.insertOne({
-    userId: user._id,
-    tokenHash: hashToken(rawToken),
-    expiresAt,
-    createdAt: new Date(),
-  });
-
+  const rawToken = await issueToken(passwordResetTokensCollection(), user._id, PASSWORD_RESET_TTL_MS);
   const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password?token=${rawToken}`;
   try {
     await sendPasswordResetEmail(user.email, user.displayName, resetUrl);
@@ -217,16 +209,15 @@ router.post("/verify-email", async (req, res) => {
 });
 
 // POST /auth/resend-verification
-router.post("/resend-verification", emailSendLimit, requireAuth, async (req, res) => {
-  const user = await usersCollection().findOne({ email: req.user!.email });
-  if (!user || !user._id) return res.status(404).json({ error: "User account not found" });
+router.post("/resend-verification", emailSendLimit, requireAuth, loadCurrentUser, async (req, res) => {
+  const user = req.currentUser!;
 
   if (user.emailVerified) {
     return res.status(400).json({ error: "This email address is already verified" });
   }
 
   try {
-    await issueVerificationEmail(user._id, user.email, user.displayName);
+    await issueVerificationEmail(user._id!, user.email, user.displayName);
   } catch (error) {
     console.error("Failed to send verification email:", error);
     return res.status(500).json({ error: "Failed to send verification email" });
@@ -236,19 +227,12 @@ router.post("/resend-verification", emailSendLimit, requireAuth, async (req, res
 });
 
 // GET /auth/me - verify the current API session and return its user
-router.get("/me", requireAuth, async (req, res) => {
-  const user = await usersCollection().findOne({ email: req.user!.email });
-  if (!user) return res.status(401).json({ error: "User account not found" });
-
-  res.json(userResponse(user));
+router.get("/me", requireAuth, loadCurrentUser, async (req, res) => {
+  res.json(userResponse(req.currentUser!));
 });
 
 // PATCH /auth/me - update the current user's display name and/or password
-router.patch("/me", requireAuth, async (req, res) => {
-  if (!ObjectId.isValid(req.user!.userId)) {
-    return res.status(401).json({ error: "Invalid user account" });
-  }
-
+router.patch("/me", requireAuth, loadCurrentUser, async (req, res) => {
   const displayName = typeof req.body.displayName === "string"
     ? req.body.displayName.trim()
     : "";
@@ -269,9 +253,8 @@ router.patch("/me", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Current password is required and the new password must be at least 8 characters" });
   }
 
-  const userId = new ObjectId(req.user!.userId);
-  const user = await usersCollection().findOne({ _id: userId });
-  if (!user) return res.status(404).json({ error: "User account not found" });
+  const user = req.currentUser!;
+  const userId = user._id!;
 
   if (newPassword && !(await bcrypt.compare(currentPassword, user.passwordHash))) {
     return res.status(401).json({ error: "Current password is incorrect" });
@@ -296,12 +279,9 @@ router.patch("/me", requireAuth, async (req, res) => {
 });
 
 // DELETE /auth/me - permanently remove the account and its owned data
-router.delete("/me", requireAuth, async (req, res) => {
-  if (!ObjectId.isValid(req.user!.userId)) {
-    return res.status(401).json({ error: "Invalid user account" });
-  }
+router.delete("/me", requireAuth, loadCurrentUser, async (req, res) => {
+  const userId = req.currentUser!._id!;
 
-  const userId = new ObjectId(req.user!.userId);
   const recipes = await recipesCollection()
     .find({ createdBy: userId }, { projection: { id: 1 } })
     .toArray();

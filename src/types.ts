@@ -35,7 +35,10 @@ export interface User {
   emailVerified: boolean;
 }
 
-export interface PasswordResetToken {
+// Shared shape for a short-lived, single-use token tied to a user — used for
+// both the password-reset and email-verification flows, which are otherwise
+// identical in how they're issued, hashed, looked up, and expired.
+export interface AuthToken {
   _id?: ObjectId;
   userId: ObjectId;
   tokenHash: string;
@@ -43,13 +46,9 @@ export interface PasswordResetToken {
   createdAt: Date;
 }
 
-export interface EmailVerificationToken {
-  _id?: ObjectId;
-  userId: ObjectId;
-  tokenHash: string;
-  expiresAt: Date;
-  createdAt: Date;
-}
+export interface PasswordResetToken extends AuthToken {}
+
+export interface EmailVerificationToken extends AuthToken {}
 
 export interface Favorite {
   _id?: ObjectId;
@@ -69,6 +68,10 @@ declare global {
   namespace Express {
     interface Request {
       user?: AuthTokenPayload;
+      // Set by loadCurrentUser once the JWT payload has been resolved to an
+      // actual user document, so downstream middleware/handlers can reuse it
+      // instead of each re-querying the database for the same record.
+      currentUser?: User;
     }
   }
 }

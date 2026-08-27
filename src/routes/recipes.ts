@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { ObjectId, Filter } from "mongodb";
-import { recipesCollection, favoritesCollection, usersCollection } from "../db";
-import { requireAuth, requireVerifiedEmail, attachUserIfPresent } from "../middleware/auth";
+import { recipesCollection, favoritesCollection } from "../db";
+import { requireAuth, requireVerifiedEmail, loadCurrentUser, attachUserIfPresent } from "../middleware/auth";
 import { RecipeDocument } from "../types";
 import { deleteImageByUrl } from "../services/s3";
+import { toPublicRecipe } from "../services/recipes";
 
 const router = Router();
 
@@ -57,9 +58,26 @@ function validateRecipeInput(body: any): string | null {
   return null;
 }
 
-export function toPublicRecipe(recipe: RecipeDocument, inMyBox = false, isOwnRecipe = false) {
-  const { _id, createdBy, updatedAt, ...publicRecipe } = recipe;
-  return { ...publicRecipe, inMyBox, isOwnRecipe };
+// Normalizes the editable recipe fields shared by create and update — both
+// need the same prepTime/cookTime/totalTime math and defaulting.
+function buildRecipeFields(body: any) {
+  const { title, ingredients, instructions, prepTimeMin, cookTimeMin, tag, imageUrl, warningNote, servings, difficulty } = body;
+  const normalizedPrepTimeMin = prepTimeMin || 0;
+  const normalizedCookTimeMin = cookTimeMin || 0;
+
+  return {
+    title,
+    ingredients,
+    instructions,
+    prepTimeMin: normalizedPrepTimeMin,
+    cookTimeMin: normalizedCookTimeMin,
+    totalTimeMin: normalizedPrepTimeMin + normalizedCookTimeMin,
+    tag: tag || "Dinner",
+    imageUrl,
+    warningNote,
+    servings,
+    difficulty,
+  };
 }
 
 // GET /recipes?name=pie&maxIngredients=5&maxTime=30&skip=0&limit=50
@@ -124,34 +142,20 @@ router.get("/:id", attachUserIfPresent, async (req, res) => {
 });
 
 // POST /recipes — requires login
-router.post("/", requireAuth, requireVerifiedEmail, async (req, res) => {
+router.post("/", requireAuth, loadCurrentUser, requireVerifiedEmail, async (req, res) => {
   const validationError = validateRecipeInput(req.body);
   if (validationError) return res.status(400).json({ error: validationError });
 
-  const { title, ingredients, instructions, prepTimeMin, cookTimeMin, tag, imageUrl, warningNote, servings, difficulty } = req.body;
-  const uploader = await usersCollection().findOne({ _id: new ObjectId(req.user!.userId) });
-  if (!uploader) return res.status(401).json({ error: "User account not found" });
+  const uploader = req.currentUser!;
   const now = new Date();
-  const normalizedPrepTimeMin = prepTimeMin || 0;
-  const normalizedCookTimeMin = cookTimeMin || 0;
 
   const newRecipe: RecipeDocument = {
     id: new ObjectId().toHexString(),
-    title,
-    ingredients,
-    instructions,
-    prepTimeMin: normalizedPrepTimeMin,
-    cookTimeMin: normalizedCookTimeMin,
-    totalTimeMin: normalizedPrepTimeMin + normalizedCookTimeMin,
-    tag: tag || "Dinner",
-    imageUrl,
-    warningNote,
-    servings,
-    difficulty,
+    ...buildRecipeFields(req.body),
     createdAt: now.toISOString(),
     isUserUpload: true,
     inMyBox: false,
-    createdBy: new ObjectId(req.user!.userId),
+    createdBy: uploader._id!,
     createdByDisplayName: uploader.displayName,
     updatedAt: now,
     favoriteCount: 0,
@@ -162,7 +166,7 @@ router.post("/", requireAuth, requireVerifiedEmail, async (req, res) => {
 });
 
 // PUT /recipes/:id — requires login, only the original uploader can edit
-router.put("/:id", requireAuth, requireVerifiedEmail, async (req, res) => {
+router.put("/:id", requireAuth, loadCurrentUser, requireVerifiedEmail, async (req, res) => {
   const validationError = validateRecipeInput(req.body);
   if (validationError) return res.status(400).json({ error: validationError });
 
@@ -172,32 +176,15 @@ router.put("/:id", requireAuth, requireVerifiedEmail, async (req, res) => {
     return res.status(403).json({ error: "You can only edit your own recipes" });
   }
 
-  const { title, ingredients, instructions, prepTimeMin, cookTimeMin, tag, imageUrl, warningNote, servings, difficulty } = req.body;
-  const normalizedPrepTimeMin = prepTimeMin || 0;
-  const normalizedCookTimeMin = cookTimeMin || 0;
+  const fields = buildRecipeFields(req.body);
 
   await recipesCollection().updateOne(
     { id: recipe.id },
-    {
-      $set: {
-        title,
-        ingredients,
-        instructions,
-        prepTimeMin: normalizedPrepTimeMin,
-        cookTimeMin: normalizedCookTimeMin,
-        totalTimeMin: normalizedPrepTimeMin + normalizedCookTimeMin,
-        tag: tag || "Dinner",
-        imageUrl,
-        warningNote,
-        servings,
-        difficulty,
-        updatedAt: new Date(),
-      },
-    }
+    { $set: { ...fields, updatedAt: new Date() } }
   );
 
   // Only remove the old photo once the new recipe data is safely persisted.
-  if (recipe.imageUrl && recipe.imageUrl !== imageUrl) {
+  if (recipe.imageUrl && recipe.imageUrl !== fields.imageUrl) {
     await deleteImageByUrl(recipe.imageUrl).catch((error) =>
       console.error("Failed to delete replaced recipe image", error),
     );
@@ -207,7 +194,7 @@ router.put("/:id", requireAuth, requireVerifiedEmail, async (req, res) => {
 });
 
 // DELETE /recipes/:id — requires login, only the original uploader can delete
-router.delete("/:id", requireAuth, requireVerifiedEmail, async (req, res) => {
+router.delete("/:id", requireAuth, loadCurrentUser, requireVerifiedEmail, async (req, res) => {
   const recipe = await recipesCollection().findOne({ id: req.params.id });
   if (!recipe) return res.status(404).json({ error: "Recipe not found" });
   if (recipe.createdBy?.toString() !== req.user!.userId) {

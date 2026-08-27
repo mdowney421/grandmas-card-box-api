@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import swaggerUi from "swagger-ui-express";
 import openapiDocument from "./openapi";
@@ -14,7 +14,17 @@ export const app = express();
 // falls back to allowing any origin for local development.
 app.use(cors(process.env.FRONTEND_URL ? { origin: process.env.FRONTEND_URL } : undefined));
 app.use(express.json());
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
+
+// Point "Try it out" at whatever host actually served this request, so the
+// docs work in every environment without a hardcoded/stale server URL.
+// An explicit API_BASE_URL always wins when set.
+app.use("/api-docs", swaggerUi.serve, (req: Request, res: Response, next: NextFunction) => {
+  const host = req.get("host") || "localhost:4000";
+  const protocol = host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
+  const baseUrl = process.env.API_BASE_URL || `${protocol}://${host}`;
+  const document = { ...openapiDocument, servers: [{ url: baseUrl }] };
+  return swaggerUi.setup(document)(req, res, next);
+});
 
 app.use("/recipes", recipesRouter);
 app.use("/auth", authRouter);

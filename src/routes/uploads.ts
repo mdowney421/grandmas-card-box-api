@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth, requireVerifiedEmail } from "../middleware/auth";
+import { requireAuth, requireVerifiedEmail, loadCurrentUser } from "../middleware/auth";
 import {
   createPresignedUploadUrl,
   createPresignedDownloadUrl,
@@ -10,7 +10,7 @@ const router = Router();
 
 // POST /uploads/presign — requires login, returns a short-lived S3 PUT URL
 // the client uploads the photo to directly, plus the public URL to save on the recipe.
-router.post("/presign", requireAuth, requireVerifiedEmail, async (req, res) => {
+router.post("/presign", requireAuth, loadCurrentUser, requireVerifiedEmail, async (req, res) => {
   const { contentType } = req.body;
 
   if (typeof contentType !== "string" || !isAllowedImageContentType(contentType)) {

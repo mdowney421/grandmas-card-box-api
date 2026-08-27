@@ -167,7 +167,10 @@ const recipes: SeedRecipe[] = [
     title: "EASY PIZZA DOUGH",
     ingredients: ["3 cups bread flour", "1 cup warm water", "2 1/4 tsp instant yeast", "1 tsp sugar", "1 tsp salt", "2 tbsp olive oil"],
     instructions: ["Stir warm water, yeast, and sugar together.", "Add flour, salt, and oil; mix into a shaggy dough.", "Knead 6 minutes, until smooth.", "Cover and rise 60 to 90 minutes, until doubled.", "Heat oven as hot as it will go with a baking sheet inside.", "Stretch dough, top lightly, and bake 8 to 12 minutes."],
-    prepTimeMin: 15, cookTimeMin: 12, totalTimeMin: 87, tag: "Staple", servings: 4, difficulty: "medium", createdAt: "2025-06-08T00:00:00.000Z", isUserUpload: false, inMyBox: false,
+    // prepTimeMin includes the 60-90 min rise — the app has no separate "rest time"
+    // field, and totalTimeMin is always prepTimeMin + cookTimeMin elsewhere, so folding
+    // the rise into prep keeps the displayed numbers internally consistent.
+    prepTimeMin: 75, cookTimeMin: 12, totalTimeMin: 87, tag: "Staple", servings: 4, difficulty: "medium", createdAt: "2025-06-08T00:00:00.000Z", isUserUpload: false, inMyBox: false,
   },
   {
     id: "seed-corn-chowder",
@@ -199,34 +202,38 @@ const recipes: SeedRecipe[] = [
   },
 ];
 
+// Each URL below was chosen by downloading the candidate and visually
+// confirming it actually depicts the dish (many of the originals didn't —
+// see the review that replaced this map). Every entry uses the free
+// Unsplash License (images.unsplash.com), not Unsplash+.
 const imageUrls: Record<string, string> = {
-  "seed-spaghetti-tomato-sauce": "https://images.unsplash.com/photo-1621996346565-e3d5d6281084?auto=format&fit=crop&w=800&q=80",
-  "seed-chicken-stir-fry": "https://images.unsplash.com/photo-1543339308-43e59d6b73a6?auto=format&fit=crop&w=800&q=80",
-  "seed-lentil-soup": "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80",
+  "seed-spaghetti-tomato-sauce": "https://images.unsplash.com/photo-1516100882582-96c3a05fe590?auto=format&fit=crop&w=800&q=80",
+  "seed-chicken-stir-fry": "https://images.unsplash.com/photo-1783196736260-dd788dff4132?auto=format&fit=crop&w=800&q=80",
+  "seed-lentil-soup": "https://images.unsplash.com/photo-1620791144170-8a443bf37a33?auto=format&fit=crop&w=800&q=80",
   "seed-roast-chicken": "https://images.unsplash.com/photo-1598103442097-8b74394b95c6?auto=format&fit=crop&w=800&q=80",
-  "seed-black-bean-tacos": "https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?auto=format&fit=crop&w=800&q=80",
+  "seed-black-bean-tacos": "https://images.unsplash.com/photo-1690874684451-92358e91b14c?auto=format&fit=crop&w=800&q=80",
   "seed-fried-rice": "https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=800&q=80",
-  "seed-baked-salmon": "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=800&q=80",
-  "seed-chili": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80",
-  "seed-pancakes": "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=800&q=80",
-  "seed-shakshuka": "https://images.unsplash.com/photo-1592417817098-8f3d6eb22521?auto=format&fit=crop&w=800&q=80",
-  "seed-grilled-cheese-tomato-soup": "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80",
-  "seed-pesto-pasta": "https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=800&q=80",
-  "seed-meatloaf": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80",
-  "seed-potato-frittata": "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=800&q=80",
-  "seed-chicken-curry": "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80",
-  "seed-tuna-salad": "https://images.unsplash.com/photo-1546793665-c74683f339c1?auto=format&fit=crop&w=800&q=80",
-  "seed-baked-ziti": "https://images.unsplash.com/photo-1579684947550-22e945225d9a?auto=format&fit=crop&w=800&q=80",
-  "seed-oatmeal": "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?auto=format&fit=crop&w=800&q=80",
-  "seed-garlic-shrimp": "https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?auto=format&fit=crop&w=800&q=80",
-  "seed-sheet-pan-sausage": "https://images.unsplash.com/photo-1592417817098-8f3d6eb22521?auto=format&fit=crop&w=800&q=80",
+  "seed-baked-salmon": "https://images.unsplash.com/photo-1728963228980-71c76178616a?auto=format&fit=crop&w=800&q=80",
+  "seed-chili": "https://images.unsplash.com/photo-1638329389022-daef2efb71b3?auto=format&fit=crop&w=800&q=80",
+  "seed-pancakes": "https://images.unsplash.com/photo-1541288097308-7b8e3f58c4c6?auto=format&fit=crop&w=800&q=80",
+  "seed-shakshuka": "https://images.unsplash.com/photo-1682622110419-b671026a4536?auto=format&fit=crop&w=800&q=80",
+  "seed-grilled-cheese-tomato-soup": "https://images.unsplash.com/photo-1785517606451-cc031f70d1ec?auto=format&fit=crop&w=800&q=80",
+  "seed-pesto-pasta": "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=800&q=80",
+  "seed-meatloaf": "https://images.unsplash.com/photo-1705945021699-7374c3fd34cb?auto=format&fit=crop&w=800&q=80",
+  "seed-potato-frittata": "https://images.unsplash.com/photo-1636044991786-249836fae83a?auto=format&fit=crop&w=800&q=80",
+  "seed-chicken-curry": "https://images.unsplash.com/photo-1764304733301-3a9f335f0c67?auto=format&fit=crop&w=800&q=80",
+  "seed-tuna-salad": "https://images.unsplash.com/photo-1779914942318-494c24cd8530?auto=format&fit=crop&w=800&q=80",
+  "seed-baked-ziti": "https://images.unsplash.com/photo-1634870487473-15874d3a0f35?auto=format&fit=crop&w=800&q=80",
+  "seed-oatmeal": "https://images.unsplash.com/photo-1715098841757-0e9690ec12d6?auto=format&fit=crop&w=800&q=80",
+  "seed-garlic-shrimp": "https://images.unsplash.com/photo-1782089543715-13daa38402b7?auto=format&fit=crop&w=800&q=80",
+  "seed-sheet-pan-sausage": "https://images.unsplash.com/photo-1698843813577-db28459556b0?auto=format&fit=crop&w=800&q=80",
   "seed-caesar-salad": "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?auto=format&fit=crop&w=800&q=80",
-  "seed-apple-crisp": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=80",
+  "seed-apple-crisp": "https://images.unsplash.com/photo-1767065584578-19a28c672512?auto=format&fit=crop&w=800&q=80",
   "seed-pizza-dough": "https://images.unsplash.com/photo-1579751626657-72bc17010498?auto=format&fit=crop&w=800&q=80",
-  "seed-corn-chowder": "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80",
-  "seed-turkey-burgers": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80",
-  "seed-cucumber-chickpea-salad": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80",
-  "seed-banana-bread": "https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=800&q=80",
+  "seed-corn-chowder": "https://images.unsplash.com/photo-1665594051407-7385d281ad76?auto=format&fit=crop&w=800&q=80",
+  "seed-turkey-burgers": "https://images.unsplash.com/photo-1682473620458-8537c3f59227?auto=format&fit=crop&w=800&q=80",
+  "seed-cucumber-chickpea-salad": "https://images.unsplash.com/photo-1633871709457-b709a6058177?auto=format&fit=crop&w=800&q=80",
+  "seed-banana-bread": "https://images.unsplash.com/photo-1675712843856-ba2cb7d33f3c?auto=format&fit=crop&w=800&q=80",
 };
 
 export async function seed(): Promise<void> {

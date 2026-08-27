@@ -5,6 +5,8 @@ const openapiDocument = {
     version: "1.0.0",
     description: "API for discovering, creating, and favoriting recipes.",
   },
+  // Overridden per-request in app.ts with the host the request actually
+  // arrived on, so "Try it out" works wherever this is deployed.
   servers: [{ url: "http://localhost:4000" }],
   tags: [
     { name: "Health" },
